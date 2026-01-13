@@ -13,6 +13,12 @@ readme = "README.md"
 repository = "https://github.com/Systemscape/argon2-cli"
 keywords = ["argon2", "hash", "cli", "terminal"]
 
+[package.metadata.wix]
+upgrade-guid = "B9F6078C-1F85-4B80-9D44-98AA7D55E9FD"
+path-guid = "126638F7-DCCB-49E3-95D2-AD7F8B18EB82"
+license = false
+eula = false
+
 [dependencies]
 argon2 = "0.5.3"
 clap = { version = "4.5.54", features = ["derive"] }
@@ -20,3 +26,8 @@ hex = "0.4.3"
 
 [dev-dependencies]
 rand = { version = "0.9.2", features = ["std", "std_rng"] }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
