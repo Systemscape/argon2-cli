@@ -1,5 +1,5 @@
 use clap::{ArgGroup, Parser};
-use std::io::{self, Read, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use argon2::password_hash::SaltString;
 
 // Usage:  argon2 [-h] salt [-i|-d|-id] [-t iterations] [-m log2(memory in KiB) | -k memory in KiB] [-p parallelism] [-l hash length] [-e|-r] [-v (10|13)]
@@ -54,11 +54,23 @@ struct Args {
 
     /// Argon2 version (defaults to the most recent version, currently 13)
     #[arg(short = 'v', default_value_t = 13)]
-    v: u32,
+    v: u32, // Unimplemented: version selection not supported, always uses v13
+}
 
-    /// Print argon2 usage
-    #[arg(short = 'h', action = clap::ArgAction::Help)]
-    help: Option<bool>,
+fn get_input() -> io::Result<String> {
+    let stdin = io::stdin();
+
+    if stdin.is_terminal() {
+        print!("Enter password: ");
+        io::stdout().flush()?;
+
+        let mut input = String::new();
+        stdin.read_line(&mut input)?;
+        Ok(input.trim().to_string())
+    } else {
+        let lines: Vec<String> = stdin.lock().lines().collect::<Result<_, _>>()?;
+        Ok(lines.join("\n"))
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -74,8 +86,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse_from(new_args);
 
-    let mut password = String::new();
-    io::stdin().read_to_string(&mut password)?;
+    let password = get_input().unwrap_or_else(|e| {
+        eprintln!("Error reading input: {}", e);
+        std::process::exit(1);
+    });
     
     // Select algorithm variant
     let algorithm = if args.d {
