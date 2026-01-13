@@ -2,6 +2,16 @@
 name = "argon2-cli"
 version = "0.1.0"
 edition = "2024"
+authors = [
+    "Joel Schulz-Andres <joel@systemscape.de>",
+    "Julian Dickert <julian@systemscape.de>",
+]
+categories = ["command-line-utilities", "development-tools",]
+description = "Generate Argon2 hashes from command line"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Systemscape/argon2-cli"
+keywords = ["argon2", "hash", "cli", "terminal"]
 
 [dependencies]
 argon2 = "0.5.3"
