@@ -52,9 +52,9 @@ struct Args {
     #[arg(short = 'r', default_value_t = false)]
     r: bool,
 
-    /// Argon2 version (defaults to the most recent version, currently 13)
+    /// Argon2 version (10 or 13, default: 13)
     #[arg(short = 'v', default_value_t = 13)]
-    v: u32, // Unimplemented: version selection not supported, always uses v13
+    v: u32,
 }
 
 fn get_input() -> io::Result<String> {
@@ -120,9 +120,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(args.l as usize),
     ).map_err(|e| format!("Invalid parameters: {}", e))?;
 
+    let version = match args.v {
+        10 => argon2::Version::V0x10,
+        13 => argon2::Version::V0x13,
+        _ => return Err(format!("Invalid version: {} (expected 10 or 13)", args.v).into()),
+    };
+
     let argon2 = argon2::Argon2::new(
         algorithm,
-        argon2::Version::V0x13,
+        version,
         params,
     );
 
