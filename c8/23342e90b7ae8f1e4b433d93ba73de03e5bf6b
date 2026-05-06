@@ -1,0 +1,24 @@
+Cargo.toml
+  5c0b56e9991ecacd 24,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "c823342e90b7ae8f1e4b433d93ba73de03e5bf6b",
+  "prompts": {
+    "5c0b56e9991ecacd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ccb92af9-54b6-4975-b9a2-d80be11b669b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Joël Schulz-Andres",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/6e3e123e9e70a2db19f997d44f90ee94446249966c45e86659776263c7a1e604"
+    }
+  }
+}
