@@ -1,7 +1,7 @@
-use std::process::Command;
-use std::io::Write;
 use rand::Rng;
 use std::collections::HashMap;
+use std::io::Write;
+use std::process::Command;
 
 const REF_BINARY: &str = "argon2";
 // We assume the binary is at the standard release location relative to the test runner.
@@ -24,19 +24,25 @@ fn run_argon2(binary: &str, salt: &str, password: &str, args: &[String]) -> Resu
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     // Setup stdin
     cmd.stdin(std::process::Stdio::piped())
-       .stdout(std::process::Stdio::piped())
-       .stderr(std::process::Stdio::piped());
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn {}: {}", binary, e))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn {}: {}", binary, e))?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(password.as_bytes()).map_err(|e| format!("Failed to write to stdin: {}", e))?;
+        stdin
+            .write_all(password.as_bytes())
+            .map_err(|e| format!("Failed to write to stdin: {}", e))?;
     }
 
-    let output = child.wait_with_output().map_err(|e| format!("Failed to wait: {}", e))?;
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("Failed to wait: {}", e))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -91,14 +97,16 @@ fn verify(i: u32, memory_exp: u32, parallelism: u32, variant: &str) -> bool {
     let rust_data = parse_output(&rust_out);
 
     let keys_to_check = ["Iterations", "Memory", "Parallelism", "Hash", "Encoded"];
-    
+
     let mut success = true;
     for key in keys_to_check {
         let ref_val = ref_data.get(key);
         let rust_val = rust_data.get(key);
-        
-        if ref_val.is_none() { continue; } // e/-r flags not processed here yet
-        
+
+        if ref_val.is_none() {
+            continue;
+        } // e/-r flags not processed here yet
+
         if rust_val.is_none() {
             eprintln!("Mismatch: key '{}' missing in Rust output", key);
             success = false;
@@ -106,11 +114,14 @@ fn verify(i: u32, memory_exp: u32, parallelism: u32, variant: &str) -> bool {
         }
 
         if ref_val != rust_val {
-            eprintln!("Mismatch for '{}':\n  Ref:  {:?}\n  Rust: {:?}", key, ref_val, rust_val);
+            eprintln!(
+                "Mismatch for '{}':\n  Ref:  {:?}\n  Rust: {:?}",
+                key, ref_val, rust_val
+            );
             success = false;
         }
     }
-    
+
     if success {
         println!("OK");
     }
@@ -141,7 +152,30 @@ fn test_argon2_compatibility() {
         let variant = variants[var_idx];
 
         if !verify(iterations, memory_exp, parallelism, variant) {
-            panic!("Random test failed with: t={}, m={}, p={}, var={}", iterations, memory_exp, parallelism, variant);
+            panic!(
+                "Random test failed with: t={}, m={}, p={}, var={}",
+                iterations, memory_exp, parallelism, variant
+            );
         }
     }
+}
+
+#[test]
+fn test_short_salt_fails_before_hashing() {
+    let output = Command::new("./target/debug/argon2-cli")
+        .arg("1234567")
+        .output()
+        .expect("Failed to run debug binary");
+
+    assert!(!output.status.success(), "Short salt should fail");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Invalid salt: minimum length is 8 characters"),
+        "unexpected stderr: {stderr}"
+    );
+    assert!(
+        !stderr.contains("Hashing failed"),
+        "salt validation should happen before hashing: {stderr}"
+    );
 }
