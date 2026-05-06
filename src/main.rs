@@ -9,8 +9,8 @@ use argon2::password_hash::SaltString;
 #[command(group(ArgGroup::new("memory").args(&["m", "k"])))]
 #[command(group(ArgGroup::new("output_format").args(&["e", "r"])))]
 struct Args {
-    /// The salt to use, at least 8 characters
-    salt: String,
+    /// The salt to use (optional, a random salt is generated if omitted)
+    salt: Option<String>,
 
     /// Use Argon2i (this is the default)
     #[arg(short = 'i', long, default_value_t = false)]
@@ -86,8 +86,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse_from(new_args);
 
-    let salt_string = SaltString::encode_b64(args.salt.as_bytes())
-        .map_err(|e| format!("Invalid salt: {}", e))?;
+    let salt_string = match &args.salt {
+        Some(salt) => SaltString::encode_b64(salt.as_bytes())
+            .map_err(|e| format!("Invalid salt: {}", e))?,
+        None => SaltString::generate(&mut rand_core::OsRng),
+    };
 
     let password = get_input().unwrap_or_else(|e| {
         eprintln!("Error reading input: {}", e);

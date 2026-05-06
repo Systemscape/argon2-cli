@@ -22,6 +22,7 @@ eula = false
 [dependencies]
 argon2 = "0.5.3"
 clap = { version = "4.5.54", features = ["derive"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 hex = "0.4.3"
 
 [dev-dependencies]
