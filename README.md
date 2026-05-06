@@ -26,6 +26,7 @@ echo -n "password" | argon2
 argon2 [-h] [salt] [-i|-d|-id] [-t iterations] [-m log2(memory in KiB) | -k memory in KiB] [-p parallelism] [-l hash length] [-e|-r] [-v (10|13)]
 ```
 
+- `[salt]` Optional explicit salt; must be at least 8 characters long
 - `-i` Use Argon2i (default)
 - `-d` Use Argon2d
 - `-id` Use Argon2id

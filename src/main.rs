@@ -1,15 +1,19 @@
+use argon2::password_hash::SaltString;
 use clap::{ArgGroup, Parser};
 use std::io::{self, BufRead, IsTerminal, Write};
-use argon2::password_hash::SaltString;
 
 // Usage:  argon2 [-h] salt [-i|-d|-id] [-t iterations] [-m log2(memory in KiB) | -k memory in KiB] [-p parallelism] [-l hash length] [-e|-r] [-v (10|13)]
 #[derive(Parser, Debug)]
-#[command(name = "argon2", about = "(Rust implementation)", disable_help_flag = false)]
+#[command(
+    name = "argon2",
+    about = "(Rust implementation)",
+    disable_help_flag = false
+)]
 #[command(group(ArgGroup::new("variant").args(&["i", "d", "id"])))]
 #[command(group(ArgGroup::new("memory").args(&["m", "k"])))]
 #[command(group(ArgGroup::new("output_format").args(&["e", "r"])))]
 struct Args {
-    /// The salt to use (optional, a random salt is generated if omitted)
+    /// The salt to use (optional, a random salt is generated if omitted; minimum 8 characters)
     salt: Option<String>,
 
     /// Use Argon2i (this is the default)
@@ -73,22 +77,34 @@ fn get_input() -> io::Result<String> {
     }
 }
 
+fn validate_salt(salt: &str) -> Result<(), String> {
+    if salt.len() < 8 {
+        return Err("Invalid salt: minimum length is 8 characters".to_string());
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Handle the non-standard `-id` flag which conflicts with clap's short flag clustering
     let args_env = std::env::args();
-    let new_args: Vec<String> = args_env.map(|arg| {
-        if arg == "-id" {
-            "--id".to_string()
-        } else {
-            arg
-        }
-    }).collect();
+    let new_args: Vec<String> = args_env
+        .map(|arg| {
+            if arg == "-id" {
+                "--id".to_string()
+            } else {
+                arg
+            }
+        })
+        .collect();
 
     let args = Args::parse_from(new_args);
 
     let salt_string = match &args.salt {
-        Some(salt) => SaltString::encode_b64(salt.as_bytes())
-            .map_err(|e| format!("Invalid salt: {}", e))?,
+        Some(salt) => {
+            validate_salt(salt)?;
+            SaltString::encode_b64(salt.as_bytes()).map_err(|e| format!("Invalid salt: {}", e))?
+        }
         None => SaltString::generate(&mut rand_core::OsRng),
     };
 
@@ -96,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("Error reading input: {}", e);
         std::process::exit(1);
     });
-    
+
     // Select algorithm variant
     let algorithm = if args.d {
         argon2::Algorithm::Argon2d
@@ -107,18 +123,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Calculate memory cost
-    let memory_kib = if let Some(k) = args.k {
-        k
-    } else {
-        1 << args.m
-    };
+    let memory_kib = if let Some(k) = args.k { k } else { 1 << args.m };
 
-    let params = argon2::Params::new(
-        memory_kib,
-        args.t,
-        args.p,
-        Some(args.l as usize),
-    ).map_err(|e| format!("Invalid parameters: {}", e))?;
+    let params = argon2::Params::new(memory_kib, args.t, args.p, Some(args.l as usize))
+        .map_err(|e| format!("Invalid parameters: {}", e))?;
 
     let version = match args.v {
         10 => argon2::Version::V0x10,
@@ -126,20 +134,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => return Err(format!("Invalid version: {} (expected 10 or 13)", args.v).into()),
     };
 
-    let argon2 = argon2::Argon2::new(
-        algorithm,
-        version,
-        params,
-    );
+    let argon2 = argon2::Argon2::new(algorithm, version, params);
 
     let start = std::time::Instant::now();
-    
+
     let password_bytes = password.as_bytes();
-    
+
     use argon2::PasswordHasher;
-    let password_hash = argon2.hash_password(password_bytes, salt_string.as_salt())
+    let password_hash = argon2
+        .hash_password(password_bytes, salt_string.as_salt())
         .map_err(|e| format!("Hashing failed: {}", e))?;
-    
+
     let duration = start.elapsed();
 
     // Generate output based on flags
@@ -147,19 +152,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", password_hash);
     } else if args.r {
         if let Some(hash) = password_hash.hash {
-             io::stdout().write_all(hash.as_bytes())?;
+            io::stdout().write_all(hash.as_bytes())?;
         }
     } else {
         println!("Type:           {:?}", algorithm);
         println!("Iterations:     {}", args.t);
         println!("Memory:         {} KiB", memory_kib);
         println!("Parallelism:    {}", args.p);
-        
+
         if let Some(hash) = password_hash.hash {
             println!("Hash:           {}", hex::encode(hash.as_bytes()));
         }
         println!("Encoded:        {}", password_hash);
-        
+
         println!("{:.3} seconds", duration.as_secs_f64());
         println!("Verification ok");
     }
