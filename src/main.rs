@@ -86,6 +86,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse_from(new_args);
 
+    let salt_string = SaltString::encode_b64(args.salt.as_bytes())
+        .map_err(|e| format!("Invalid salt: {}", e))?;
+
     let password = get_input().unwrap_or_else(|e| {
         eprintln!("Error reading input: {}", e);
         std::process::exit(1);
@@ -113,10 +116,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         args.p,
         Some(args.l as usize),
     ).map_err(|e| format!("Invalid parameters: {}", e))?;
-
-    // Encode salt to PHC string format
-    let salt_string = SaltString::encode_b64(args.salt.as_bytes())
-        .map_err(|e| format!("Invalid salt: {}", e))?;
 
     let argon2 = argon2::Argon2::new(
         algorithm,
