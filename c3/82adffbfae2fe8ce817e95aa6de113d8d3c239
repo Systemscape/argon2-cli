@@ -1,0 +1,32 @@
+tests/verify.rs
+  s_a346fe3e792321::t_f6afafbff67c2f 163-207
+  s_a346fe3e792321::t_b3f77680cfa156 210
+  s_a346fe3e792321::t_d4d0db03667496 135
+Cargo.toml
+  s_a346fe3e792321::t_c4bc9ae783d7bf 27
+src/main.rs
+  s_a346fe3e792321::t_6fe859472b0410 171-174
+  s_a346fe3e792321::t_b4e917bf037de9 118
+  s_a346fe3e792321::t_85caef4ff3e300 145,147
+  s_a346fe3e792321::t_f57c62dd9abf4b 65,72,74-78,80-83
+  s_a346fe3e792321::t_e14c3728617eee 3-4
+  s_a346fe3e792321::t_8d1fec846f2aad 157
+Cargo.lock
+  s_a346fe3e792321::t_9d1c4bf830c14a 76,432-437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c382adffbfae2fe8ce817e95aa6de113d8d3c239",
+  "prompts": {},
+  "sessions": {
+    "s_a346fe3e792321": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7c08736-eead-421a-8031-17e1c769366c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Joël Schulz-Andres <joel@systemscape.de>"
+    }
+  }
+}
