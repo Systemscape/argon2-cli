@@ -1,6 +1,7 @@
 use argon2::password_hash::SaltString;
 use clap::{ArgGroup, Parser};
-use std::io::{self, BufRead, IsTerminal, Write};
+use std::io::{self, IsTerminal, Read, Write};
+use zeroize::Zeroizing;
 
 // Usage:  argon2 [-h] salt [-i|-d|-id] [-t iterations] [-m log2(memory in KiB) | -k memory in KiB] [-p parallelism] [-l hash length] [-e|-r] [-v (10|13)]
 #[derive(Parser, Debug)]
@@ -61,19 +62,25 @@ struct Args {
     v: u32,
 }
 
-fn get_input() -> io::Result<String> {
+fn get_input() -> io::Result<Zeroizing<Vec<u8>>> {
     let stdin = io::stdin();
 
     if stdin.is_terminal() {
         print!("Enter password: ");
         io::stdout().flush()?;
 
-        let mut input = String::new();
+        let mut input = Zeroizing::new(String::new());
         stdin.read_line(&mut input)?;
-        Ok(input.trim().to_string())
+        // Strip only the newline from pressing Enter, keep other whitespace
+        while input.ends_with('\n') || input.ends_with('\r') {
+            input.pop();
+        }
+        Ok(Zeroizing::new(input.as_bytes().to_vec()))
     } else {
-        let lines: Vec<String> = stdin.lock().lines().collect::<Result<_, _>>()?;
-        Ok(lines.join("\n"))
+        // Read stdin verbatim (including any trailing newline) to match the reference implementation
+        let mut input = Zeroizing::new(Vec::new());
+        stdin.lock().read_to_end(&mut input)?;
+        Ok(input)
     }
 }
 
@@ -108,10 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => SaltString::generate(&mut rand_core::OsRng),
     };
 
-    let password = get_input().unwrap_or_else(|e| {
-        eprintln!("Error reading input: {}", e);
-        std::process::exit(1);
-    });
+    let password = get_input().map_err(|e| format!("Error reading input: {}", e))?;
 
     // Select algorithm variant
     let algorithm = if args.d {
@@ -138,11 +142,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let start = std::time::Instant::now();
 
-    let password_bytes = password.as_bytes();
-
-    use argon2::PasswordHasher;
+    use argon2::{PasswordHasher, PasswordVerifier};
     let password_hash = argon2
-        .hash_password(password_bytes, salt_string.as_salt())
+        .hash_password(&password, salt_string.as_salt())
         .map_err(|e| format!("Hashing failed: {}", e))?;
 
     let duration = start.elapsed();
@@ -152,7 +154,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", password_hash);
     } else if args.r {
         if let Some(hash) = password_hash.hash {
-            io::stdout().write_all(hash.as_bytes())?;
+            println!("{}", hex::encode(hash.as_bytes()));
         }
     } else {
         println!("Type:           {:?}", algorithm);
@@ -166,6 +168,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Encoded:        {}", password_hash);
 
         println!("{:.3} seconds", duration.as_secs_f64());
+
+        argon2
+            .verify_password(&password, &password_hash)
+            .map_err(|e| format!("Verification failed: {}", e))?;
         println!("Verification ok");
     }
 
