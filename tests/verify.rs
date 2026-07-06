@@ -132,7 +132,7 @@ fn verify(i: u32, memory_exp: u32, parallelism: u32, variant: &str) -> bool {
 fn test_argon2_compatibility() {
     // Build release binary first
     let status = Command::new("cargo")
-        .args(&["build", "--release", "--bin", "argon2-cli"])
+        .args(["build", "--release", "--bin", "argon2-cli"])
         .status()
         .expect("Failed to build binary");
     assert!(status.success(), "Construction of binary failed");
@@ -160,9 +160,54 @@ fn test_argon2_compatibility() {
     }
 }
 
+// Debug binary is always built by `cargo test` for integration tests
+const RUST_DEBUG_BINARY: &str = "./target/debug/argon2-cli";
+
+#[test]
+fn test_encoded_output_matches_reference() {
+    let salt = generate_random_string(8);
+    let password = generate_random_string(12);
+    let args = vec!["-e".to_string()];
+
+    let ref_out = run_argon2(REF_BINARY, &salt, &password, &args).expect("reference failed");
+    let rust_out = run_argon2(RUST_DEBUG_BINARY, &salt, &password, &args).expect("rust failed");
+
+    assert_eq!(ref_out, rust_out, "-e output differs from reference");
+}
+
+#[test]
+fn test_raw_output_matches_reference() {
+    let salt = generate_random_string(8);
+    let password = generate_random_string(12);
+    let args = vec!["-r".to_string()];
+
+    let ref_out = run_argon2(REF_BINARY, &salt, &password, &args).expect("reference failed");
+    let rust_out = run_argon2(RUST_DEBUG_BINARY, &salt, &password, &args).expect("rust failed");
+
+    assert_eq!(ref_out, rust_out, "-r output differs from reference");
+}
+
+#[test]
+fn test_stdin_read_verbatim() {
+    let salt = generate_random_string(8);
+    let args = vec!["-e".to_string()];
+
+    // Trailing newlines and inner newlines are part of the password, as in the reference
+    for password in ["password\n", "pass\nword", "  password  "] {
+        let ref_out = run_argon2(REF_BINARY, &salt, password, &args).expect("reference failed");
+        let rust_out = run_argon2(RUST_DEBUG_BINARY, &salt, password, &args).expect("rust failed");
+
+        assert_eq!(
+            ref_out, rust_out,
+            "stdin handling differs from reference for {:?}",
+            password
+        );
+    }
+}
+
 #[test]
 fn test_short_salt_fails_before_hashing() {
-    let output = Command::new("./target/debug/argon2-cli")
+    let output = Command::new(RUST_DEBUG_BINARY)
         .arg("1234567")
         .output()
         .expect("Failed to run debug binary");

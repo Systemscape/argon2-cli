@@ -24,6 +24,7 @@ argon2 = "0.5.3"
 clap = { version = "4.6.1", features = ["derive"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 hex = "0.4.3"
+zeroize = "1"
 
 [dev-dependencies]
 rand = { version = "0.9.4", features = ["std", "std_rng"] }
