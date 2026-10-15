@@ -1,0 +1,14 @@
+Cargo.lock
+  h_266fe4f058ae1a 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bcdb9e2df93d5e4cadac7ddc1535f4ab50594e36",
+  "prompts": {},
+  "humans": {
+    "h_266fe4f058ae1a": {
+      "author": "Joël Schulz-Andres <joel@systemscape.de>"
+    }
+  }
+}
